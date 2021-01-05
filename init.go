@@ -15,30 +15,53 @@ func initializeData() {
 	createIfNotExist(filepath.Join("data", "css", "layout.css"), layoutCSS)
 	createIfNotExist(filepath.Join("data", "template", "shared", "layout.html"), layoutHTML)
 	createIfNotExist(filepath.Join("data", "template", "markdown.html"), markdownHTML)
+	createIfNotExist(filepath.Join("data", "css", "edit.css"), editCSS)
+	createIfNotExist(filepath.Join("data", "js", "edit.js"), editJS)
+	createIfNotExist(filepath.Join("data", "template", "edit.html"), editHTML)
 
 	createEmojiList()
 
-	infos, err := ioutil.ReadDir("dummyData")
+	copyInitData()
+}
+
+func copyInitData() {
+	err := filepath.Walk("initData",
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				log.Error("INIT", "copy init data", err)
+				return err
+			}
+
+			if info.IsDir() {
+				dir := "data" + path[8:]
+				log.Info("INIT", "make dir", dir)
+				os.MkdirAll(dir, 0775)
+				return nil
+			}
+
+			destinationFile := "data" + path[8:]
+			return copyFileIfNotExists(path, destinationFile)
+		})
 	if err != nil {
-		log.Error("INIT", "dummy data", err)
+		log.Error("INIT", "walk init data", err)
 	}
-	for _, i := range infos {
-		sourceFile := filepath.Join("dummyData", i.Name())
-		destinationFile := filepath.Join("data", "md", i.Name())
-		if _, err := os.Stat(destinationFile); os.IsNotExist(err) {
-			log.Info("INIT", "copy dummy file", sourceFile)
-			input, err := ioutil.ReadFile(sourceFile)
-			if err != nil {
-				log.Error("INIT", "read source", sourceFile, err)
-				continue
-			}
-			err = ioutil.WriteFile(destinationFile, input, 0775)
-			if err != nil {
-				log.Error("INIT", "write file", destinationFile, err)
-				continue
-			}
+}
+
+func copyFileIfNotExists(sourceFile, destinationFile string) error {
+	if _, err := os.Stat(destinationFile); os.IsNotExist(err) {
+		log.Info("INIT", "copy init file", sourceFile)
+		input, err := ioutil.ReadFile(sourceFile)
+		if err != nil {
+			log.Error("INIT", "read source", sourceFile, err)
+			return err
+		}
+		err = ioutil.WriteFile(destinationFile, input, 0775)
+		if err != nil {
+			log.Error("INIT", "write file", destinationFile, err)
+			return err
 		}
 	}
+	return nil
 }
 
 func makeDirs() {
@@ -90,7 +113,7 @@ func createEmojiList() {
 func getEmoji() map[string][]string {
 	emojis := make(map[string][]string)
 
-	data, err := ioutil.ReadFile("emoji")
+	data, err := ioutil.ReadFile(filepath.Join("initData", "emoji"))
 	if err != nil {
 		log.Error("INIT", "load emoji", err)
 		return emojis
@@ -117,7 +140,15 @@ Tags:
 ---
 `
 
-var layoutCSS = ``
+var layoutCSS = `
+html {
+	height: 100%;
+}
+
+body {
+	height: 100%;
+}
+`
 
 var layoutHTML = `
 {{define "layout"}}
@@ -128,7 +159,7 @@ var layoutHTML = `
         {{if .Title}}<title>{{.Title}}</title>{{end}}
         {{if .Description}}<meta name="description" content="{{.Description}}">{{end}}
         {{if .Author}}<meta name="author" content="{{.Author}}">{{end}}
-        <link rel="stylesheet" href="css/layout.css">
+        <link rel="stylesheet" href="/css/layout.css">
         {{range .Layouts}}
             <link rel="stylesheet" href="{{.}}">
         {{end}}
@@ -149,4 +180,53 @@ var markdownHTML = `
 {{define "content"}}
     {{.Content}}
 {{end}}
+`
+
+var editHTML = `
+{{template "layout" .}}
+
+{{define "content"}}
+	<button type="button" id="save">Save</button>
+	<input type="hidden" id="name" value="{{.Name}}">
+	<hr>
+    <textarea id="content">{{.Content}}</textarea>
+{{end}}
+`
+
+var editCSS = `
+#content {
+	width: 100%;
+	height: 80%;
+}
+`
+
+var editJS = `
+window.onload = function() {
+    const saveButton = document.getElementById("save")
+    const nameField = document.getElementById("name")
+    const contentArea = document.getElementById("content")
+
+    saveButton.addEventListener("click", function() {
+        let data = {
+            Name: nameField.value,
+            Content: contentArea.textContent,
+        };
+
+        fetch("/save", {
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            method: "POST",
+            body: JSON.stringify(data)
+        }).then((response) => {
+            response.text().then(function(data) {
+                let result = JSON.parse(data);
+                console.log("Result", result);
+            });
+        }).catch((error) => {
+            console.log(error);
+        });
+    })
+}
 `

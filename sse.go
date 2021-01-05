@@ -23,11 +23,12 @@ var (
 	events chan Event
 )
 
-func startSSE(router *httprouter.Router) {
+func startSSE(router *httprouter.Router) *chan Event {
 	events = make(chan Event)
 	sender := sse.New()
 	router.Handler("GET", "/event", sender)
 	go streamEvents(sender)
+	return &events
 }
 
 func stopSSE() {
