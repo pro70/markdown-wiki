@@ -46,7 +46,7 @@ func Debug(reference string, data ...interface{}) {
 func appendDataToLog(logLevel string, reference string, data string) {
 	dateTimeFormat := "2006-01-02 15:04:05.000"
 	logNameDateTimeFormat := "2006-01-02"
-	logDirectory := filepath.Join(".", "log")
+	logDirectory := filepath.Join(".", "data", "log")
 	logFileName := fmt.Sprintf("%v.log", time.Now().Format(logNameDateTimeFormat))
 	logFullPath := filepath.Join(logDirectory, logFileName)
 	logData := fmt.Sprintf("%v %v %v %v", time.Now().Format(dateTimeFormat), reference, logLevel, data)

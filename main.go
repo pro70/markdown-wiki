@@ -51,11 +51,10 @@ func (p program) Stop(s service.Service) error {
 }
 
 func (p program) run() {
-	initializeData()
-
 	log.EnableDebug()
-	log.DirectoryCheck()
 	go log.DeleteOldLogFiles(96*time.Hour, &serviceIsRunning)
+
+	initializeData()
 
 	router := httprouter.New()
 	registerRoutes(router)
@@ -69,6 +68,8 @@ func (p program) run() {
 }
 
 func main() {
+	log.DirectoryCheck()
+
 	serviceConfig := &service.Config{
 		Name:        serviceName,
 		DisplayName: serviceName,
