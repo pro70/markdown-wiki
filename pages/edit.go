@@ -147,7 +147,12 @@ func pageUpdateEvent(name string) {
 	var event sdk.Event
 	event.Event = "MD_UPDATE"
 	event.Data = name
-	sdk.ClientEvents <- event
+	if sdk.ClientEvents != nil {
+		sdk.ClientEvents <- event
+	}
+	if sdk.ClientEvents != nil {
+		sdk.UpdateEvents <- event
+	}
 }
 
 func updateFile(name string, content string) error {

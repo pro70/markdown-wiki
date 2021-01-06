@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"sync"
@@ -9,8 +10,10 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/kardianos/service"
 
+	"github.com/irgangla/markdown-wiki/config"
 	"github.com/irgangla/markdown-wiki/events"
 	"github.com/irgangla/markdown-wiki/log"
+	"github.com/irgangla/markdown-wiki/version"
 )
 
 const serviceName = "Medium service"
@@ -36,7 +39,8 @@ func (p program) Start(s service.Service) error {
 }
 
 func (p program) Stop(s service.Service) error {
-	events.StopSSE()
+	events.Stop()
+	version.Stop()
 
 	writingSync.Lock()
 	serviceIsRunning = false
@@ -57,11 +61,16 @@ func (p program) run() {
 
 	initializeData()
 
+	c := config.Load()
+
+	version.Start(c.CommitName, c.CommitMail)
+
 	router := httprouter.New()
 	registerRoutes(router)
-	events.StartSSE(router)
+	events.Start(router)
 
-	err := http.ListenAndServe(":81", router)
+	host := fmt.Sprintf(":%v", c.Port)
+	err := http.ListenAndServe(host, router)
 	if err != nil {
 		log.Error("RUN", "Problem starting web server:", err.Error())
 		os.Exit(-1)

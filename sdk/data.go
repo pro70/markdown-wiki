@@ -38,4 +38,6 @@ type Content struct {
 var (
 	// ClientEvents queues events for the client
 	ClientEvents chan Event
+	// UpdateEvents queue for versioning
+	UpdateEvents chan Event
 )

@@ -10,16 +10,16 @@ import (
 	"github.com/irgangla/markdown-wiki/sdk"
 )
 
-// StartSSE starts server side event sending
-func StartSSE(router *httprouter.Router) {
+// Start starts server side event sending
+func Start(router *httprouter.Router) {
 	sdk.ClientEvents = make(chan sdk.Event)
 	sender := sse.New()
 	router.Handler("GET", "/event", sender)
 	go streamEvents(sender)
 }
 
-// StopSSE stops server side event sending
-func StopSSE() {
+// Stop stops server side event sending
+func Stop() {
 	close(sdk.ClientEvents)
 }
 
