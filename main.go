@@ -9,6 +9,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/kardianos/service"
 
+	"github.com/irgangla/markdown-wiki/events"
 	"github.com/irgangla/markdown-wiki/log"
 )
 
@@ -35,7 +36,7 @@ func (p program) Start(s service.Service) error {
 }
 
 func (p program) Stop(s service.Service) error {
-	stopSSE()
+	events.StopSSE()
 
 	writingSync.Lock()
 	serviceIsRunning = false
@@ -58,7 +59,7 @@ func (p program) run() {
 
 	router := httprouter.New()
 	registerRoutes(router)
-	startSSE(router)
+	events.StartSSE(router)
 
 	err := http.ListenAndServe(":81", router)
 	if err != nil {

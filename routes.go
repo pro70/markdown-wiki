@@ -14,6 +14,8 @@ import (
 func registerRoutes(router *httprouter.Router) {
 	router.ServeFiles("/js/*filepath", http.Dir(filepath.Join("data", "js")))
 	router.ServeFiles("/css/*filepath", http.Dir(filepath.Join("data", "css")))
+	router.ServeFiles("/img/*filepath", http.Dir(filepath.Join("data", "img")))
+	router.ServeFiles("/static/*filepath", http.Dir(filepath.Join("data", "html")))
 
 	router.GET("/view/:name", render.Endpoint)
 	router.GET("/edit/:name", pages.EditEndpoint)

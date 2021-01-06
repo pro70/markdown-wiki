@@ -73,7 +73,7 @@ func toMessage(data []interface{}) string {
 	for _, d := range data {
 		part, ok := d.(string)
 		if !ok {
-			part = reflect.TypeOf(d).Name()
+			part = fmt.Sprintf("%v (%v)", d, reflect.TypeOf(d))
 		}
 		message = message + part + " "
 	}

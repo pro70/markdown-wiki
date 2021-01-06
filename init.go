@@ -14,6 +14,7 @@ func initializeData() {
 
 	createIfNotExist(filepath.Join("data", "css", "layout.css"), layoutCSS)
 	createIfNotExist(filepath.Join("data", "template", "shared", "layout.html"), layoutHTML)
+	createIfNotExist(filepath.Join("data", "js", "markdown.js"), markdownJS)
 	createIfNotExist(filepath.Join("data", "template", "markdown.html"), markdownHTML)
 	createIfNotExist(filepath.Join("data", "css", "edit.css"), editCSS)
 	createIfNotExist(filepath.Join("data", "js", "edit.js"), editJS)
@@ -66,6 +67,7 @@ func copyFileIfNotExists(sourceFile, destinationFile string) error {
 
 func makeDirs() {
 	dirs := [][]string{
+		[]string{".", "data", "img"},
 		[]string{".", "data", "css"},
 		[]string{".", "data", "html"},
 		[]string{".", "data", "js"},
@@ -155,14 +157,16 @@ var layoutHTML = `
 <!doctype html>
 <html lang="en">
     <head>
-        <meta charset="utf-8">
+		<meta charset="utf-8">
+		<link rel="shortcut icon" href="/img/favicon.ico">
         {{if .Title}}<title>{{.Title}}</title>{{end}}
         {{if .Description}}<meta name="description" content="{{.Description}}">{{end}}
         {{if .Author}}<meta name="author" content="{{.Author}}">{{end}}
         <link rel="stylesheet" href="/css/layout.css">
         {{range .Layouts}}
             <link rel="stylesheet" href="{{.}}">
-        {{end}}
+		{{end}}
+		{{template "scripts" .}}
         {{range .Scripts}}
             <script src="{{.}}"></script>
         {{end}} 
@@ -177,16 +181,39 @@ var layoutHTML = `
 var markdownHTML = `
 {{template "layout" .}}
 
+{{define "scripts"}}
+	<script src="/js/markdown.js"></script>
+{{end}}
+
 {{define "content"}}
+	<a href="/edit/{{.Name}}">Edit</a>
+	<hr>
+	{{range .Tags}}
+		{{.}}
+	{{end}}
+	<hr>
     {{.Content}}
 {{end}}
+`
+
+var markdownJS = `
+window.onload = function() {
+    const events = new EventSource('/event');
+	events.addEventListener('MD_UPDATE', (e) => {
+		console.log(e);
+		location.reload();
+	}, false);
+}
 `
 
 var editHTML = `
 {{template "layout" .}}
 
+{{define "scripts"}}{{end}}
+
 {{define "content"}}
 	<button type="button" id="save">Save</button>
+	<a href="/view/{{.Name}}">View</a>
 	<input type="hidden" id="name" value="{{.Name}}">
 	<hr>
     <textarea id="content">{{.Content}}</textarea>
@@ -209,7 +236,7 @@ window.onload = function() {
     saveButton.addEventListener("click", function() {
         let data = {
             Name: nameField.value,
-            Content: contentArea.textContent,
+            Content: contentArea.value,
         };
 
         fetch("/save", {

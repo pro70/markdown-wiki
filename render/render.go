@@ -3,10 +3,12 @@ package render
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"html/template"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
+	"reflect"
 
 	chromaHtml "github.com/alecthomas/chroma/formatters/html"
 	"github.com/julienschmidt/httprouter"
@@ -20,23 +22,9 @@ import (
 	"github.com/yuin/goldmark/renderer/html"
 
 	"github.com/irgangla/markdown-wiki/log"
+	"github.com/irgangla/markdown-wiki/sdk"
 	wikiTemplate "github.com/irgangla/markdown-wiki/template"
 )
-
-// MetaDataContent contains the metadata of the rendered file
-type MetaDataContent struct {
-	Title       string
-	Description string
-	Author      string
-	Layouts     []string
-	Scripts     []string
-}
-
-// MarkdownContent contains the render result
-type MarkdownContent struct {
-	MetaDataContent
-	Content template.HTML
-}
 
 // Endpoint to server markdown pages
 func Endpoint(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
@@ -44,7 +32,8 @@ func Endpoint(writer http.ResponseWriter, request *http.Request, params httprout
 
 	writer.Header().Set("Content-Type", "text/html")
 
-	data, err := renderMarkdown(params.ByName("name"))
+	name := params.ByName("name")
+	data, err := renderMarkdown(name)
 	if err != nil || data == nil {
 		log.Error("MARKDOWN", "Data error")
 		writer.WriteHeader(404)
@@ -73,13 +62,13 @@ func Endpoint(writer http.ResponseWriter, request *http.Request, params httprout
 
 	err = t.Execute(writer, *data)
 	if err != nil {
-		log.Error("MARKDOWN", "Template render error", err)
+		log.Error("MARKDOWN", "Template render error", err.Error())
 		return
 	}
 }
 
 // File renders the given markdown file as HTML string
-func File(name string) (*MarkdownContent, error) {
+func File(name string) (*sdk.SafeContent, error) {
 	data, err := renderMarkdown(name)
 	if err != nil || data == nil {
 		log.Error("MARKDOWN", "File render error")
@@ -92,7 +81,7 @@ func File(name string) (*MarkdownContent, error) {
 	return data, nil
 }
 
-func renderMarkdown(name string) (*MarkdownContent, error) {
+func renderMarkdown(name string) (*sdk.SafeContent, error) {
 	md := goldmark.New(
 		goldmark.WithExtensions(
 			extension.GFM,
@@ -130,13 +119,19 @@ func renderMarkdown(name string) (*MarkdownContent, error) {
 	}
 
 	metaData := meta.Get(context)
-	data := new(MarkdownContent)
+	data := new(sdk.SafeContent)
 
 	data.Title = getMetaDataString("Title", &metaData)
 	data.Description = getMetaDataString("Summary", &metaData)
 	data.Author = getMetaDataString("Author", &metaData)
 	data.Layouts = getMetaDataList("Layouts", &metaData)
 	data.Scripts = getMetaDataList("Scripts", &metaData)
+	data.Tags = getMetaDataList("Tags", &metaData)
+	data.Name = name
+
+	fmt.Println(metaData)
+	fmt.Println(data)
+	fmt.Println(data.Tags)
 
 	data.Content = template.HTML(buf.String())
 
@@ -146,10 +141,12 @@ func renderMarkdown(name string) (*MarkdownContent, error) {
 func getMetaDataString(key string, data *map[string]interface{}) string {
 	d, ok := (*data)[key]
 	if !ok {
+		log.Debug("MARKDOWN", "MetaData String:", "key not found")
 		return ""
 	}
 	v, ok := d.(string)
 	if !ok {
+		log.Debug("MARKDOWN", "MetaData String:", "no string")
 		return ""
 	}
 	return v
@@ -158,11 +155,21 @@ func getMetaDataString(key string, data *map[string]interface{}) string {
 func getMetaDataList(key string, data *map[string]interface{}) []string {
 	d, ok := (*data)[key]
 	if !ok {
+		log.Debug("MARKDOWN", "MetaData List:", "key not found")
 		return make([]string, 0)
 	}
 	v, ok := d.([]string)
 	if !ok {
-		return make([]string, 0)
+		log.Debug("MARKDOWN", "MetaData List:", "no string list", d)
+		switch reflect.TypeOf(d).Kind() {
+		case reflect.Slice:
+			values := reflect.ValueOf(d)
+			list := make([]string, 0)
+			for i := 0; i < values.Len(); i++ {
+				list = append(list, fmt.Sprintf("%v", values.Index(i)))
+			}
+			return list
+		}
 	}
 	return v
 }

@@ -10,21 +10,13 @@ import (
 	"github.com/julienschmidt/httprouter"
 
 	"github.com/irgangla/markdown-wiki/log"
+	"github.com/irgangla/markdown-wiki/sdk"
 	wikiTemplate "github.com/irgangla/markdown-wiki/template"
 )
 
-// MetaDataContent for layout
-type MetaDataContent struct {
-	Title       string
-	Description string
-	Author      string
-	Layouts     []string
-	Scripts     []string
-}
-
 // EditContent contains the edit data
 type EditContent struct {
-	MetaDataContent
+	sdk.MetaData
 	Name    string
 	Content string
 }
@@ -133,7 +125,9 @@ func SaveEndpoint(writer http.ResponseWriter, request *http.Request, params http
 	}
 
 	end := time.Since(timer)
-	log.Info("SAVE", "Processing takes:", end)
+	log.Info("SAVE", "Processing takes:", end.String())
+
+	pageUpdateEvent(data.Name)
 
 	var responseData SaveOutput
 	responseData.Result = "ok"
@@ -149,7 +143,15 @@ func SaveEndpoint(writer http.ResponseWriter, request *http.Request, params http
 	return
 }
 
+func pageUpdateEvent(name string) {
+	var event sdk.Event
+	event.Event = "MD_UPDATE"
+	event.Data = name
+	sdk.ClientEvents <- event
+}
+
 func updateFile(name string, content string) error {
 	path := filepath.Join("data", "md", name+".md")
+	log.Info("SAVE", "Update file", path)
 	return ioutil.WriteFile(path, []byte(content), 0775)
 }
