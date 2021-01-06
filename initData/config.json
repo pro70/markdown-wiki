@@ -1,5 +1,6 @@
 {
     "Port": 81,
     "CommitName": "thomas",
-    "CommitMail": "thomas@irgang.eu"
+    "CommitMail": "thomas@irgang.eu",
+    "CommitPush": true
 }

@@ -63,7 +63,7 @@ func (p program) run() {
 
 	c := config.Load()
 
-	version.Start(c.CommitName, c.CommitMail)
+	version.Start(c.CommitName, c.CommitMail, c.CommitPush)
 
 	router := httprouter.New()
 	registerRoutes(router)
